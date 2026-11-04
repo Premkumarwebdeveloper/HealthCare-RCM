@@ -14,7 +14,7 @@ export const tokenStore = {
   },
 };
 
-const client = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api' });
+const client = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api' });
 
 client.interceptors.request.use((config) => {
   const token = tokenStore.get();
