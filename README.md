@@ -86,3 +86,5 @@ inside transactions; the seed script runs in a single transaction.
 * Source of the Dashboard figures: claims are windowed by `updated_at`; AR = billed − paid for non-Paid claims;
   aging buckets use days since date of service.
 * The login screen's photographic background is approximated with a CSS gradient (no image asset was provided).
+# HealthCare-RCM
+Revenue Cycle Management
