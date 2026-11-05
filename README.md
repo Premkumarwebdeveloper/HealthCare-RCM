@@ -31,7 +31,7 @@ docker compose up -d
 
 # 2. Backend
 cd backend
-cp .env.example .env          # adjust DATABASE_URL / JWT_SECRET
+cp .env.example .env          # adjust DB_* settings / JWT_SECRET
 npm install
 npm run migrate               # create schema
 npm run seed                  # demo data (150 claims, 2 users)
@@ -75,7 +75,9 @@ Errors: `{ "message": string, "errors"?: [{ "field", "message" }] }` with 400 (v
 `users, payers, providers, patients, action_codes, status_codes, claims` – normalized with foreign keys,
 CHECK constraints (status values, `paid_amount <= billed_amount`) and indexes on DOS, status, payer,
 provider, patient, `updated_at` and patient name. Migrations are tracked in `schema_migrations` and applied
-inside transactions; the seed script runs in a single transaction.
+inside transactions; the seed script runs in a single transaction and upserts demo records without truncating
+existing tables. Configure PostgreSQL with `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_NAME`;
+an existing `DATABASE_URL` is also supported.
 
 ## Scope notes
 * Implemented end-to-end: Login, Dashboard, Claims Details (filters, status chips, sorting, row selection,

@@ -6,9 +6,20 @@ types.setTypeParser(1082, (v) => v);
 types.setTypeParser(1700, (v) => parseFloat(v));
 types.setTypeParser(20, (v) => parseInt(v, 10));
 
-const pool = new Pool({ connectionString: env.DATABASE_URL, max: 10 });
+const connectionConfig = env.DATABASE_URL
+  ? { connectionString: env.DATABASE_URL }
+  : {
+      host: env.DB_HOST,
+      port: env.DB_PORT,
+      user: env.DB_USERNAME,
+      password: env.DB_PASSWORD,
+      database: env.DB_NAME,
+    };
+const pool = new Pool({ ...connectionConfig, max: 10 });
 
 const query = (text, params) => pool.query(text, params);
+
+const checkConnection = () => pool.query('SELECT 1');
 
 async function withTransaction(work) {
   const client = await pool.connect();
@@ -25,4 +36,4 @@ async function withTransaction(work) {
   }
 }
 
-module.exports = { pool, query, withTransaction };
+module.exports = { pool, query, checkConnection, withTransaction };

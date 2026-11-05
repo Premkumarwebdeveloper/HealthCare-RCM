@@ -68,25 +68,40 @@ async function seed() {
   const passwordHash = await bcrypt.hash('Password@123', 10);
   await withTransaction(async (c) => {
     await c.query(
-      'TRUNCATE claims, patients, providers, payers, action_codes, status_codes, users RESTART IDENTITY CASCADE',
-    );
-    await c.query(
       `INSERT INTO users (username, full_name, password_hash, role) VALUES
-       ('deepa.k', 'Deepa K', $1, 'admin'), ('biller.demo', 'Billing Demo', $1, 'biller')`,
+       ('deepa.k', 'Deepa K', $1, 'admin'), ('biller.demo', 'Billing Demo', $1, 'biller')
+       ON CONFLICT (username) DO UPDATE SET
+         full_name = EXCLUDED.full_name, password_hash = EXCLUDED.password_hash, role = EXCLUDED.role`,
       [passwordHash],
     );
     for (const [code, label] of ACTION_CODES)
-      await c.query('INSERT INTO action_codes (code, label) VALUES ($1, $2)', [code, label]);
+      await c.query(
+        `INSERT INTO action_codes (code, label) VALUES ($1, $2)
+         ON CONFLICT (code) DO UPDATE SET label = EXCLUDED.label`,
+        [code, label],
+      );
     for (const [code, desc] of STATUS_CODES)
-      await c.query('INSERT INTO status_codes (code, description) VALUES ($1, $2)', [code, desc]);
+      await c.query(
+        `INSERT INTO status_codes (code, description) VALUES ($1, $2)
+         ON CONFLICT (code) DO UPDATE SET description = EXCLUDED.description`,
+        [code, desc],
+      );
     const providerIds = [];
     for (const [name, npi] of PROVIDERS) {
-      const r = await c.query('INSERT INTO providers (name, npi) VALUES ($1, $2) RETURNING id', [name, npi]);
+      const r = await c.query(
+        `INSERT INTO providers (name, npi) VALUES ($1, $2)
+         ON CONFLICT (npi) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
+        [name, npi],
+      );
       providerIds.push(r.rows[0].id);
     }
     const payerIds = [];
     for (const [name] of PAYERS) {
-      const r = await c.query('INSERT INTO payers (name) VALUES ($1) RETURNING id', [name]);
+      const r = await c.query(
+        `INSERT INTO payers (name) VALUES ($1)
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
+        [name],
+      );
       payerIds.push(r.rows[0].id);
     }
 
@@ -96,7 +111,10 @@ async function seed() {
       const memberId = `${PAYERS[payerIdx][1]}${String(10000000 + i * 7919).slice(0, 8)}`;
       const dob = `${int(1950, 2000)}-${String(int(1, 12)).padStart(2, '0')}-${String(int(1, 28)).padStart(2, '0')}`;
       const r = await c.query(
-        'INSERT INTO patients (first_name, last_name, dob, member_id) VALUES ($1,$2,$3,$4) RETURNING id',
+        `INSERT INTO patients (first_name, last_name, dob, member_id) VALUES ($1,$2,$3,$4)
+         ON CONFLICT (member_id) DO UPDATE SET
+           first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, dob = EXCLUDED.dob
+         RETURNING id`,
         [FIRST[i % FIRST.length], LAST[(i * 3 + Math.floor(i / 10)) % LAST.length], dob, memberId],
       );
       patients.push({ id: r.rows[0].id, payerId: payerIds[payerIdx] });
@@ -112,7 +130,13 @@ async function seed() {
       await c.query(
         `INSERT INTO claims (claim_number, patient_id, payer_id, provider_id, dos, billed_amount,
            paid_amount, status, action_code, status_code, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         ON CONFLICT (claim_number) DO UPDATE SET
+           patient_id = EXCLUDED.patient_id, payer_id = EXCLUDED.payer_id,
+           provider_id = EXCLUDED.provider_id, dos = EXCLUDED.dos,
+           billed_amount = EXCLUDED.billed_amount, paid_amount = EXCLUDED.paid_amount,
+           status = EXCLUDED.status, action_code = EXCLUDED.action_code,
+           status_code = EXCLUDED.status_code, updated_at = EXCLUDED.updated_at`,
         [
           `CLM${1004000 + i}`,
           patient.id,
